@@ -70,14 +70,15 @@
         <p>© Анонимный голосовой чат</p>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://onlinechat-d66c.onrender.com/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({
+        const socket = io('https://onlinechat-d66c.onrender.com', {
             query: {
                 clientId: generateUniqueId()
             }
         });
-
+    </script>
+    <script>
         let peerConnection;
         const configuration = {
             iceServers: [{
