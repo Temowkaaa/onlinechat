@@ -71,14 +71,14 @@
     </div>
 
     <script src="https://onlinechat-d66c.onrender.com/socket.io/socket.io.js"></script>
+
     <script>
         const socket = io('https://onlinechat-d66c.onrender.com', {
             query: {
                 clientId: generateUniqueId()
             }
         });
-    </script>
-    <script>
+
         let peerConnection;
         const configuration = {
             iceServers: [{
