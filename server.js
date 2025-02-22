@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-d66c.onrender.com', // URL вашего фронтенда (например, https://voice-chat.vercel.app)
+        origin: 'https://onlinechat-1.onrender.com', // URL вашего фронтенда (например, https://voice-chat.vercel.app)
         methods: ['GET', 'POST']
     }
 });
