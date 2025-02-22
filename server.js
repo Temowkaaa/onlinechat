@@ -5,7 +5,12 @@ const socketIo = require('socket.io');
 // Создаем сервер
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: 'https://onlinechat-theta.vercel.app', // URL вашего фронтенда (например, https://voice-chat.vercel.app)
+        methods: ['GET', 'POST']
+    }
+});
 
 // Статические файлы
 app.use(express.static('public'));
