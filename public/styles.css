@@ -1,0 +1,311 @@
+/* Общие настройки */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Контейнер для формы */
+.chat-container {
+    background-color: #ffffff;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Заголовок */
+h1 {
+    margin-bottom: 20px;
+    color: #333333;
+}
+
+/* Ввод данных */
+input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+/* Кнопки */
+button {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button#startChat {
+    background-color: #4caf50;
+}
+
+button#startChat:hover {
+    background-color: #45a049;
+}
+
+button#endChat {
+    background-color: #f44336;
+    display: none;
+}
+
+button#endChat:hover {
+    background-color: #e53935;
+}
+
+/* Аудио элемент */
+audio {
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* Кнопки выбора диапазона */
+.age-range-buttons {
+    display: block;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.age-range-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: #007bff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.age-range-btn:hover {
+    background-color: #0056b3;
+}
+
+.age-range-btn.active {
+    background-color: #28a745;
+}
+
+.age-range-btn.active:hover {
+    background-color: #1e7e34;
+}
+
+/* Контейнер для уведомлений */
+.notifications {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    z-index: 1000;
+}
+
+.notification {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 14px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.5s ease-in-out, fadeOut 0.5s ease-in-out 4.5s forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.notification.info {
+    background-color: #007bff;
+}
+
+.notification.success {
+    background-color: #28a745;
+}
+
+.notification.warning {
+    background-color: #ffc107;
+    color: #000000;
+}
+
+.notification.error {
+    background-color: #dc3545;
+}
+
+/* Контейнер для выбора возрастов */
+.age-selection-columns {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+/* Колонка */
+.column {
+    width: 48%;
+    /* Две колонки по 48% ширины */
+    text-align: center;
+}
+
+/* Кнопки выбора возраста */
+.user-age-btn,
+.partner-age-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: #007bff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.user-age-btn:hover,
+.partner-age-btn:hover {
+    background-color: #0056b3;
+}
+
+.user-age-btn.active,
+.partner-age-btn.active {
+    background-color: #28a745;
+}
+
+.user-age-btn.active:hover,
+.partner-age-btn.active:hover {
+    background-color: #1e7e34;
+}
+
+/* Информация об онлайн-приложениях */
+.app-info {
+    background-color: #f4f4f9;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Выбор пола */
+.gender-selection {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.gender-selection label {
+    margin-right: 10px;
+}
+
+/* Состояние поиска */
+.search-status {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f4f4f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 16px;
+    color: #555;
+}
+
+/* Контейнер для выбора пола */
+.gender-selection-columns {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+/* Колонка */
+.column {
+    width: 48%;
+    /* Две колонки по 48% ширины */
+    text-align: center;
+}
+
+/* Кнопки выбора пола */
+.gender-btn,
+.partner-gender-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 10px;
+    /* Отступ между кнопками */
+    width: 100%;
+    /* Ширина кнопок равна ширине колонки */
+}
+
+.gender-btn {
+    background-color: #007bff;
+}
+
+.partner-gender-btn {
+    background-color: #007bff;
+    /* Серый цвет для "Любой" */
+}
+
+.gender-btn:hover,
+.partner-gender-btn:hover {
+    background-color: #0056b3;
+}
+
+.gender-btn.active,
+.partner-gender-btn.active {
+    background-color: #28a745;
+}
+
+.gender-btn.active:hover,
+.partner-gender-btn.active:hover {
+    background-color: #1e7e34;
+}
+
+/* Подсказки */
+small {
+    display: block;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.online {
+    float: right;
+    width: 50%;
+    background: #28a745;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #ffffff;
+    transition: background-color 0.3s ease;
+}
