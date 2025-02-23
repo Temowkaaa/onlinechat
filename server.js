@@ -4,9 +4,11 @@ const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
+
+// Настройка Socket.IO с CORS
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-1.onrender.com',
+        origin: 'https://onlinechat-1.onrender.com', // Например, https://voice-chat.onrender.com
         methods: ['GET', 'POST']
     }
 });
@@ -68,7 +70,18 @@ io.on('connection', (socket) => {
         );
     }
 
-    // Обработка сигнальных сообщений
+    // Обработка отключения пользователя
+    socket.on('disconnect', () => {
+        onlineCount--;
+        io.emit('updateOnlineCount', onlineCount);
+
+        console.log('User disconnected:', socket.id);
+        users = users.filter(user => user !== socket);
+    });
+});
+
+// Обработка сигнальных сообщений
+io.on('connection', (socket) => {
     socket.on('signal', (data) => {
         const {
             sdp,
@@ -92,19 +105,10 @@ io.on('connection', (socket) => {
             console.warn('Target socket not found for peerId:', peerId);
         }
     });
-
-    // Обработка отключения пользователя
-    socket.on('disconnect', () => {
-        onlineCount--;
-        io.emit('updateOnlineCount', onlineCount);
-
-        console.log('User disconnected:', socket.id);
-        users = users.filter(user => user !== socket);
-    });
 });
 
 // Запуск сервера
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Используем PORT из переменной окружения
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
