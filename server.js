@@ -3,7 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const {
     v4: uuidv4
-} = require('uuid');
+} = require('uuid'); // Импортируем модуль uuid
 
 const app = express();
 const server = http.createServer(app);
@@ -20,7 +20,6 @@ let onlineCount = 0;
 io.on('connection', (socket) => {
     const userId = uuidv4(); // Генерируем уникальный ID
     socket.id = userId;
-    console.log('New user connected with ID:', userId);
 
     onlineCount++;
     io.emit('updateOnlineCount', onlineCount);
@@ -57,13 +56,11 @@ io.on('connection', (socket) => {
             }, 500); // Задержка для надежности
 
             console.log('Connected users:', socket.id, 'and', partner.id);
-        } else {
-            console.log('No compatible partner found for user:', socket.id);
         }
     });
 
     function findCompatiblePartner(user) {
-        const partner = users.find(
+        return users.find(
             potentialPartner =>
             potentialPartner !== user &&
             user.userAge >= potentialPartner.ageRange.min &&
@@ -73,40 +70,7 @@ io.on('connection', (socket) => {
             (user.partnerGender === 'any' || user.partnerGender === potentialPartner.userGender) &&
             (potentialPartner.partnerGender === 'any' || potentialPartner.partnerGender === user.userGender)
         );
-
-        if (!partner) {
-            console.log('No compatible partner found for user:', user.id);
-        } else {
-            console.log('Found compatible partner:', partner.id);
-        }
-
-        return partner;
     }
-
-    socket.on('signal', (data) => {
-        const {
-            sdp,
-            candidate,
-            peerId
-        } = data;
-
-        const targetSocket = users.find(user => user.id === peerId);
-
-        if (!targetSocket) {
-            console.warn(`Target socket not found for peerId: ${peerId}`);
-            return;
-        }
-
-        if (sdp) {
-            targetSocket.emit('signal', {
-                sdp
-            });
-        } else if (candidate) {
-            targetSocket.emit('signal', {
-                candidate
-            });
-        }
-    });
 
     socket.on('disconnect', () => {
         onlineCount--;

@@ -68,13 +68,9 @@
         <button id="endChat">Завершить общение</button>
     </div>
 
-    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('https://onlinechat-d66c.onrender.com', {
-            query: {
-                clientId: generateUniqueId()
-            }
-        });
+        const socket = io('https://ваш-бэкенд-url');
 
         let peerConnection;
         const configuration = {
@@ -90,8 +86,8 @@
         // Переменные для хранения данных пользователя
         let selectedUserAgeRange = null;
         let selectedPartnerAgeRange = null;
-        let userGender = null; // Пользовательский пол
-        let partnerGender = null; // Предпочтительный пол собеседника
+        let userGender = null;
+        let partnerGender = null;
 
         // Генерация уникального ID клиента
         function generateUniqueId() {
@@ -218,7 +214,8 @@
                 peerConnection.onicecandidate = event => {
                     if (event.candidate) {
                         socket.emit('signal', {
-                            candidate: event.candidate
+                            candidate: event.candidate,
+                            peerId: socket.id
                         });
                     }
                 };
@@ -236,15 +233,32 @@
                     console.log('Connection state changed:', peerConnection.connectionState);
 
                     if (peerConnection.connectionState === 'disconnected') {
+                        alert('Собеседник покинул чат.');
                         document.getElementById('startChat').style.display = 'block';
                         document.getElementById('endChat').style.display = 'none';
                         document.getElementById('searchStatus').textContent = 'Готовы к общению';
                         location.reload();
                     }
                 };
+
+                // Таймаут для поиска собеседника
+                const searchTimeout = setTimeout(() => {
+                    if (document.getElementById('searchStatus').textContent === 'Ищем собеседника...') {
+                        alert('Собеседник не найден. Попробуйте позже.');
+                        document.getElementById('startChat').style.display = 'block';
+                        document.getElementById('endChat').style.display = 'none';
+                        document.getElementById('searchStatus').textContent = 'Готовы к общению';
+                        socket.disconnect();
+                    }
+                }, 30000); // 30 секунд
+
+                // Очистка таймаута, если собеседник найден
+                socket.on('connectToPeer', () => {
+                    clearTimeout(searchTimeout);
+                });
             } catch (error) {
                 console.error('Error initializing WebRTC:', error);
-                alert('Не удалось установить соединение. Попробуйте позже.');
+                alert('Ошибка при установке соединения. Попробуйте позже.');
             }
         };
 
@@ -267,23 +281,7 @@
             }
         });
 
-        // Обработка события "connectToPeer"
-        socket.on('connectToPeer', async peerId => {
-            try {
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
-                socket.emit('signal', {
-                    sdp: offer,
-                    peerId
-                });
-            } catch (error) {
-                console.error('Error creating offer:', error);
-                alert('Ошибка при создании предложения. Попробуйте позже.');
-            }
-        });
-
-        // Обработка сигнализации
+        // Обработка сигнальных сообщений
         socket.on('signal', async signal => {
             try {
                 if (signal.sdp) {
@@ -294,7 +292,8 @@
                         await peerConnection.setLocalDescription(answer);
 
                         socket.emit('signal', {
-                            sdp: answer
+                            sdp: answer,
+                            peerId: signal.peerId
                         });
                     }
                 } else if (signal.candidate) {
@@ -306,20 +305,13 @@
             }
         });
 
-        // Если собеседник не найден
-        socket.on('noPartnerFound', () => {
-            alert('Собеседник не найден. Попробуйте позже.');
-            document.getElementById('startChat').style.display = 'block';
-            document.getElementById('endChat').style.display = 'none';
-            document.getElementById('searchStatus').textContent = 'Готовы к общению';
-        });
-
+        // Если собеседник отключился
         socket.on('partnerDisconnected', () => {
             alert('Собеседник покинул чат.');
             document.getElementById('startChat').style.display = 'block';
             document.getElementById('endChat').style.display = 'none';
             document.getElementById('searchStatus').textContent = 'Готовы к общению';
-            location.reload(); // Перезагрузка страницы
+            location.reload();
         });
 
         // Загружаем сохраненные предпочтения при загрузке страницы
