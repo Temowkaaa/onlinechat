@@ -5,14 +5,18 @@ const socketIo = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Настройка Socket.IO с CORS
+// Настройка Socket.IO
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-1.onrender.com', // Например, https://voice-chat.onrender.com
+        origin: 'https://onlinechat-1.onrender.com', // Например, https://onlinechat-1.onrender.com
         methods: ['GET', 'POST']
     }
 });
 
+// Подключение к статическим файлам Socket.IO
+app.use('/socket.io', express.static(__dirname + '/node_modules/socket.io/client-dist'));
+
+// Остальной код вашего сервера...
 let users = [];
 let onlineCount = 0;
 
