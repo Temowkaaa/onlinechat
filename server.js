@@ -2,32 +2,21 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 
-// Создаем сервер
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-1.onrender.com', // URL вашего фронтенда (например, https://voice-chat.vercel.app)
+        origin: 'https://onlinechat-1.onrender.com',
         methods: ['GET', 'POST']
     }
 });
 
-// Статические файлы
-app.use(express.static('public'));
-
-let users = []; // Очередь пользователей
-let onlineUsers = new Set(); // Множество уникальных пользователей
-let onlineCount = 0; // Количество активных пользователей
+let users = [];
+let onlineCount = 0;
 
 io.on('connection', (socket) => {
-    const clientId = socket.handshake.query.clientId;
-
-    // Проверяем, не подключен ли уже этот пользователь
-    if (!onlineUsers.has(clientId)) {
-        onlineUsers.add(clientId);
-        onlineCount++;
-        io.emit('updateOnlineCount', onlineCount); // Отправляем обновленное значение всем клиентам
-    }
+    onlineCount++;
+    io.emit('updateOnlineCount', onlineCount);
 
     console.log('New user connected:', socket.id);
 
@@ -41,7 +30,6 @@ io.on('connection', (socket) => {
             partnerGender
         } = userData;
 
-        // Сохраняем данные пользователя
         socket.userAge = age;
         socket.ageRange = {
             min: minAge,
@@ -52,15 +40,17 @@ io.on('connection', (socket) => {
 
         users.push(socket);
 
-        // Ищем подходящего собеседника
         const partner = findCompatiblePartner(socket);
 
         if (partner) {
-            users = users.filter(user => user !== socket && user !== partner); // Удаляем из очереди
+            users = users.filter(user => user !== socket && user !== partner);
 
-            // Подключаем пользователей друг к другу
             io.to(socket.id).emit('connectToPeer', partner.id);
             io.to(partner.id).emit('connectToPeer', socket.id);
+
+            console.log('Connected users:', socket.id, 'and', partner.id);
+        } else {
+            console.log('No compatible partner found for user:', socket.id);
         }
     });
 
@@ -78,22 +68,43 @@ io.on('connection', (socket) => {
         );
     }
 
+    // Обработка сигнальных сообщений
+    socket.on('signal', (data) => {
+        const {
+            sdp,
+            candidate,
+            peerId
+        } = data;
+
+        const targetSocket = users.find(user => user.id === peerId);
+
+        if (targetSocket) {
+            if (sdp) {
+                targetSocket.emit('signal', {
+                    sdp
+                });
+            } else if (candidate) {
+                targetSocket.emit('signal', {
+                    candidate
+                });
+            }
+        } else {
+            console.warn('Target socket not found for peerId:', peerId);
+        }
+    });
+
     // Обработка отключения пользователя
     socket.on('disconnect', () => {
-        const clientId = socket.handshake.query.clientId;
-
-        if (onlineUsers.has(clientId)) {
-            onlineUsers.delete(clientId);
-            onlineCount--;
-            io.emit('updateOnlineCount', onlineCount); // Отправляем обновленное значение всем клиентам
-        }
+        onlineCount--;
+        io.emit('updateOnlineCount', onlineCount);
 
         console.log('User disconnected:', socket.id);
-        users = users.filter(user => user !== socket); // Удаляем из очереди
+        users = users.filter(user => user !== socket);
     });
 });
 
 // Запуск сервера
-server.listen(3000, () => {
-    console.log('Server is running on port 3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

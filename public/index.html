@@ -66,12 +66,9 @@
 
         <button id="startChat" disabled>Начать общение</button>
         <button id="endChat">Завершить общение</button>
-
-        <p>© Анонимный голосовой чат</p>
     </div>
 
-    <script src="https://onlinechat-d66c.onrender.com/socket.io/socket.io.js"></script>
-
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io('https://onlinechat-d66c.onrender.com', {
             query: {
@@ -82,8 +79,12 @@
         let peerConnection;
         const configuration = {
             iceServers: [{
-                urls: 'stun:stun.l.google.com:19302'
-            }]
+                    urls: 'stun:stun.l.google.com:19302'
+                },
+                {
+                    urls: 'stun:stun.services.mozilla.com'
+                }
+            ]
         };
 
         // Переменные для хранения данных пользователя
@@ -135,20 +136,13 @@
         // Обработка выбора возраста пользователя
         document.querySelectorAll('.user-age-btn').forEach(button => {
             button.addEventListener('click', () => {
-                // Сброс активного состояния всех кнопок
                 document.querySelectorAll('.user-age-btn').forEach(btn => btn.classList.remove(
                     'active'));
-
-                // Добавляем активное состояние выбранной кнопки
                 button.classList.add('active');
 
-                // Сохраняем выбранный диапазон
                 selectedUserAgeRange = button.getAttribute('data-age');
-
-                // Сохраняем выбор в localStorage
                 localStorage.setItem('userAge', selectedUserAgeRange);
 
-                // Проверяем, можно ли активировать кнопку "Начать общение"
                 checkStartButton();
             });
         });
@@ -156,20 +150,13 @@
         // Обработка выбора диапазона возраста собеседника
         document.querySelectorAll('.partner-age-btn').forEach(button => {
             button.addEventListener('click', () => {
-                // Сброс активного состояния всех кнопок
                 document.querySelectorAll('.partner-age-btn').forEach(btn => btn.classList.remove(
                     'active'));
-
-                // Добавляем активное состояние выбранной кнопки
                 button.classList.add('active');
 
-                // Сохраняем выбранный диапазон
                 selectedPartnerAgeRange = button.getAttribute('data-range');
-
-                // Сохраняем выбор в localStorage
                 localStorage.setItem('partnerAge', selectedPartnerAgeRange);
 
-                // Проверяем, можно ли активировать кнопку "Начать общение"
                 checkStartButton();
             });
         });
@@ -177,22 +164,13 @@
         // Обработка выбора пола пользователя
         document.querySelectorAll('.gender-btn').forEach(button => {
             button.addEventListener('click', () => {
-                // Сброс активного состояния всех кнопок
                 document.querySelectorAll('.gender-btn').forEach(btn => btn.classList.remove('active'));
-
-                // Добавляем активное состояние выбранной кнопки
                 button.classList.add('active');
 
-                // Сохраняем выбранный пол
                 userGender = button.getAttribute('data-gender');
-
-                // Сохраняем выбор в localStorage
                 localStorage.setItem('userGender', userGender);
 
-                // Проверяем, можно ли активировать кнопку "Начать общение"
                 checkStartButton();
-
-                // Скрываем подсказку
                 document.getElementById('userGenderHint').style.display = 'none';
             });
         });
@@ -200,39 +178,28 @@
         // Обработка выбора пола собеседника
         document.querySelectorAll('.partner-gender-btn').forEach(button => {
             button.addEventListener('click', () => {
-                // Сброс активного состояния всех кнопок
                 document.querySelectorAll('.partner-gender-btn').forEach(btn => btn.classList.remove(
                     'active'));
-
-                // Добавляем активное состояние выбранной кнопки
                 button.classList.add('active');
 
-                // Сохраняем выбранный пол собеседника
                 partnerGender = button.getAttribute('data-gender');
-
-                // Сохраняем выбор в localStorage
                 localStorage.setItem('partnerGender', partnerGender);
 
-                // Проверяем, можно ли активировать кнопку "Начать общение"
                 checkStartButton();
-
-                // Скрываем подсказку
                 document.getElementById('partnerGenderHint').style.display = 'none';
             });
         });
 
-        document.getElementById('startChat').onclick = () => {
+        document.getElementById('startChat').onclick = async () => {
             if (!selectedUserAgeRange || !selectedPartnerAgeRange || userGender === null || partnerGender ===
                 null) {
                 alert('Пожалуйста, заполните все поля.');
                 return;
             }
 
-            // Разбиваем диапазоны на минимальное и максимальное значение
             const [minUserAge, maxUserAge] = selectedUserAgeRange.split('-').map(Number);
             const [minPartnerAge, maxPartnerAge] = selectedPartnerAgeRange.split('-').map(Number);
 
-            // Отправляем данные на сервер
             socket.emit('joinQueue', {
                 age: Math.floor((minUserAge + maxUserAge) / 2),
                 minAge: minPartnerAge,
@@ -243,43 +210,47 @@
 
             document.getElementById('startChat').style.display = 'none';
             document.getElementById('endChat').style.display = 'block';
-
             document.getElementById('searchStatus').textContent = 'Ищем собеседника...';
 
-            // Инициализация WebRTC
-            peerConnection = new RTCPeerConnection(configuration);
+            try {
+                peerConnection = new RTCPeerConnection(configuration);
 
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.emit('signal', {
-                        candidate: event.candidate
-                    });
-                }
-            };
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        socket.emit('signal', {
+                            candidate: event.candidate
+                        });
+                    }
+                };
 
-            peerConnection.ontrack = event => {
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.srcObject = event.streams[0];
-                document.body.appendChild(audio);
+                peerConnection.ontrack = event => {
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.srcObject = event.streams[0];
+                    document.body.appendChild(audio);
 
-                document.getElementById('searchStatus').textContent = 'Соединение установлено!';
-            };
+                    document.getElementById('searchStatus').textContent = 'Соединение установлено!';
+                };
 
-            // Обработка разрыва соединения
-            peerConnection.onconnectionstatechange = () => {
-                if (peerConnection.connectionState === 'disconnected') {
-                    document.getElementById('startChat').style.display = 'block';
-                    document.getElementById('endChat').style.display = 'none';
-                    document.getElementById('searchStatus').textContent = 'Готовы к общению';
-                    location.reload(); // Перезагрузка страницы
-                }
-            };
+                peerConnection.onconnectionstatechange = () => {
+                    console.log('Connection state changed:', peerConnection.connectionState);
+
+                    if (peerConnection.connectionState === 'disconnected') {
+                        document.getElementById('startChat').style.display = 'block';
+                        document.getElementById('endChat').style.display = 'none';
+                        document.getElementById('searchStatus').textContent = 'Готовы к общению';
+                        location.reload();
+                    }
+                };
+            } catch (error) {
+                console.error('Error initializing WebRTC:', error);
+                alert('Не удалось установить соединение. Попробуйте позже.');
+            }
         };
 
         document.getElementById('endChat').onclick = () => {
             socket.disconnect();
-            location.reload(); // Перезагрузка страницы
+            location.reload();
         };
 
         // Обновление количества пользователей онлайн
@@ -287,7 +258,6 @@
             const onlineCountElement = document.getElementById('onlineCount');
             onlineCountElement.textContent = count;
 
-            // Добавляем класс для анимации
             if (count > parseInt(onlineCountElement.textContent)) {
                 onlineCountElement.classList.add('increase');
                 setTimeout(() => onlineCountElement.classList.remove('increase'), 500);
@@ -299,20 +269,40 @@
 
         // Обработка события "connectToPeer"
         socket.on('connectToPeer', async peerId => {
-            socket.emit('signal', {
-                sdp: await peerConnection.createOffer()
-            });
-            peerConnection.setRemoteDescription(new RTCSessionDescription(await peerConnection
-                .createAnswer()));
+            try {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                socket.emit('signal', {
+                    sdp: offer,
+                    peerId
+                });
+            } catch (error) {
+                console.error('Error creating offer:', error);
+                alert('Ошибка при создании предложения. Попробуйте позже.');
+            }
         });
 
         // Обработка сигнализации
-        socket.on('signal', signal => {
-            if (signal.sdp) {
-                peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-                peerConnection.setLocalDescription(new RTCSessionDescription(signal.sdp));
-            } else if (signal.candidate) {
-                peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        socket.on('signal', async signal => {
+            try {
+                if (signal.sdp) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+                    if (signal.sdp.type === 'offer') {
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+
+                        socket.emit('signal', {
+                            sdp: answer
+                        });
+                    }
+                } else if (signal.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                }
+            } catch (error) {
+                console.error('Error handling signal:', error);
+                alert('Ошибка при обработке сигнала. Попробуйте позже.');
             }
         });
 
