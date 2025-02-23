@@ -1,32 +1,29 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const uuid = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
-
-// Настройка Socket.IO
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-1.onrender.com', // Например, https://onlinechat-1.onrender.com
+        origin: 'https://onlinechat-1.onrender.com',
         methods: ['GET', 'POST']
     }
 });
 
-// Подключение к статическим файлам Socket.IO
-app.use('/socket.io', express.static(__dirname + '/node_modules/socket.io/client-dist'));
-
-// Остальной код вашего сервера...
 let users = [];
 let onlineCount = 0;
 
 io.on('connection', (socket) => {
+    const userId = uuid.v4(); // Генерируем уникальный ID
+    socket.id = userId;
+
     onlineCount++;
     io.emit('updateOnlineCount', onlineCount);
 
-    console.log('New user connected:', socket.id);
+    console.log('New user connected with ID:', userId);
 
-    // Обработка присоединения пользователя к очереди
     socket.on('joinQueue', (userData) => {
         const {
             age,
@@ -49,10 +46,12 @@ io.on('connection', (socket) => {
         const partner = findCompatiblePartner(socket);
 
         if (partner) {
-            users = users.filter(user => user !== socket && user !== partner);
-
             io.to(socket.id).emit('connectToPeer', partner.id);
             io.to(partner.id).emit('connectToPeer', socket.id);
+
+            setTimeout(() => {
+                users = users.filter(user => user !== socket && user !== partner);
+            }, 500); // Задержка для надежности
 
             console.log('Connected users:', socket.id, 'and', partner.id);
         } else {
@@ -60,9 +59,8 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Функция для поиска совместимого собеседника
     function findCompatiblePartner(user) {
-        return users.find(
+        const partner = users.find(
             potentialPartner =>
             potentialPartner !== user &&
             user.userAge >= potentialPartner.ageRange.min &&
@@ -72,20 +70,16 @@ io.on('connection', (socket) => {
             (user.partnerGender === 'any' || user.partnerGender === potentialPartner.userGender) &&
             (potentialPartner.partnerGender === 'any' || potentialPartner.partnerGender === user.userGender)
         );
+
+        if (!partner) {
+            console.log('No compatible partner found for user:', user.id);
+        } else {
+            console.log('Found compatible partner:', partner.id);
+        }
+
+        return partner;
     }
 
-    // Обработка отключения пользователя
-    socket.on('disconnect', () => {
-        onlineCount--;
-        io.emit('updateOnlineCount', onlineCount);
-
-        console.log('User disconnected:', socket.id);
-        users = users.filter(user => user !== socket);
-    });
-});
-
-// Обработка сигнальных сообщений
-io.on('connection', (socket) => {
     socket.on('signal', (data) => {
         const {
             sdp,
@@ -95,24 +89,40 @@ io.on('connection', (socket) => {
 
         const targetSocket = users.find(user => user.id === peerId);
 
-        if (targetSocket) {
-            if (sdp) {
-                targetSocket.emit('signal', {
-                    sdp
-                });
-            } else if (candidate) {
-                targetSocket.emit('signal', {
-                    candidate
-                });
-            }
-        } else {
-            console.warn('Target socket not found for peerId:', peerId);
+        if (!targetSocket) {
+            console.warn(`Target socket not found for peerId: ${peerId}`);
+            return;
         }
+
+        if (sdp) {
+            targetSocket.emit('signal', {
+                sdp
+            });
+        } else if (candidate) {
+            targetSocket.emit('signal', {
+                candidate
+            });
+        }
+    });
+
+    socket.on('disconnect', () => {
+        onlineCount--;
+        io.emit('updateOnlineCount', onlineCount);
+
+        console.log('User disconnected:', socket.id);
+
+        users.forEach(user => {
+            if (user.partnerId === socket.id) {
+                user.emit('partnerDisconnected');
+                delete user.partnerId;
+            }
+        });
+
+        users = users.filter(user => user !== socket);
     });
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 3000; // Используем PORT из переменной окружения
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

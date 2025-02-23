@@ -314,6 +314,14 @@
             document.getElementById('searchStatus').textContent = 'Готовы к общению';
         });
 
+        socket.on('partnerDisconnected', () => {
+            alert('Собеседник покинул чат.');
+            document.getElementById('startChat').style.display = 'block';
+            document.getElementById('endChat').style.display = 'none';
+            document.getElementById('searchStatus').textContent = 'Готовы к общению';
+            location.reload(); // Перезагрузка страницы
+        });
+
         // Загружаем сохраненные предпочтения при загрузке страницы
         loadPreferences();
     </script>
