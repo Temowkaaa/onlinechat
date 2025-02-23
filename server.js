@@ -1,7 +1,9 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const uuid = require('uuid');
+const {
+    v4: uuidv4
+} = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,8 +18,9 @@ let users = [];
 let onlineCount = 0;
 
 io.on('connection', (socket) => {
-    const userId = uuid.v4(); // Генерируем уникальный ID
+    const userId = uuidv4(); // Генерируем уникальный ID
     socket.id = userId;
+    console.log('New user connected with ID:', userId);
 
     onlineCount++;
     io.emit('updateOnlineCount', onlineCount);
