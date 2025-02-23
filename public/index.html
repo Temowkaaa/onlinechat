@@ -68,9 +68,11 @@
         <button id="endChat">Завершить общение</button>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <script>
-        const socket = io('https://onlinechat-d66c.onrender.com');
+        const socket = io('https://onlinechat-d66c.onrender.com', {
+            transports: ['websocket']
+        });
 
         let peerConnection;
         const configuration = {
