@@ -3,13 +3,13 @@ const http = require('http');
 const socketIo = require('socket.io');
 const {
     v4: uuidv4
-} = require('uuid'); // Импортируем модуль uuid
+} = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: 'https://onlinechat-1.onrender.com',
+        origin: ['https://onlinechat-1.onrender.com', 'http://localhost:3000'], // Разрешенные домены
         methods: ['GET', 'POST']
     }
 });
@@ -26,6 +26,7 @@ io.on('connection', (socket) => {
 
     console.log('New user connected with ID:', userId);
 
+    // Обработка присоединения пользователя к очереди
     socket.on('joinQueue', (userData) => {
         const {
             age,
@@ -48,17 +49,23 @@ io.on('connection', (socket) => {
         const partner = findCompatiblePartner(socket);
 
         if (partner) {
-            io.to(socket.id).emit('connectToPeer', partner.id);
-            io.to(partner.id).emit('connectToPeer', socket.id);
-
-            setTimeout(() => {
-                users = users.filter(user => user !== socket && user !== partner);
-            }, 500); // Задержка для надежности
+            io.to(socket.id).emit('connectToPeer', {
+                peerId: partner.id
+            });
+            io.to(partner.id).emit('connectToPeer', {
+                peerId: socket.id
+            });
 
             console.log('Connected users:', socket.id, 'and', partner.id);
+
+            // Удаляем пользователей из очереди после задержки
+            setTimeout(() => {
+                users = users.filter(user => user !== socket && user !== partner);
+            }, 500);
         }
     });
 
+    // Функция для поиска совместимого собеседника
     function findCompatiblePartner(user) {
         return users.find(
             potentialPartner =>
@@ -72,12 +79,47 @@ io.on('connection', (socket) => {
         );
     }
 
+    // Обработка сигнальных сообщений
+    socket.on('signal', (data) => {
+        const {
+            sdp,
+            candidate,
+            peerId
+        } = data;
+
+        if (!peerId) {
+            console.error('Missing peerId in signal data:', data);
+            return;
+        }
+
+        const targetSocket = users.find(user => user.id === peerId);
+
+        if (!targetSocket) {
+            console.warn(`Target socket not found for peerId: ${peerId}`);
+            return;
+        }
+
+        if (sdp) {
+            targetSocket.emit('signal', {
+                sdp,
+                peerId: socket.id
+            });
+        } else if (candidate) {
+            targetSocket.emit('signal', {
+                candidate,
+                peerId: socket.id
+            });
+        }
+    });
+
+    // Обработка отключения пользователя
     socket.on('disconnect', () => {
         onlineCount--;
         io.emit('updateOnlineCount', onlineCount);
 
         console.log('User disconnected:', socket.id);
 
+        // Уведомляем всех о разрыве соединения
         users.forEach(user => {
             if (user.partnerId === socket.id) {
                 user.emit('partnerDisconnected');
@@ -89,6 +131,7 @@ io.on('connection', (socket) => {
     });
 });
 
+// Запуск сервера
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

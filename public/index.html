@@ -10,11 +10,10 @@
 
 <body>
     <div class="chat-container">
+        <h1>Анонимный голосовой чат</h1>
 
         <!-- Информация об онлайн-пользователях -->
-        <div class="online">Пользователей онлайн: <span id="onlineCount">0</span></div>
-
-        <h1>Анонимный голосовой чат</h1>
+        <p>Пользователей онлайн: <span id="onlineCount">0</span></p>
 
         <!-- Выбор пола -->
         <div class="gender-selection-columns">
@@ -28,10 +27,10 @@
 
             <!-- Столбец для выбора пола собеседника -->
             <div class="column">
-                <p>Пол собеседника:</p>
+                <p>Выберите предпочитаемый пол собеседника:</p>
                 <button class="partner-gender-btn" data-gender="male">Мужской</button>
                 <button class="partner-gender-btn" data-gender="female">Женский</button>
-                <button class="partner-gender-btn" data-gender="any">Любой</button>
+                <button class="partner-gender-btn" data-gender="any" style="background-color: #6c757d;">Любой</button>
                 <small id="partnerGenderHint" style="color: red; display: none;">Выберите предпочитаемый пол
                     собеседника</small>
             </div>
@@ -51,7 +50,7 @@
 
             <!-- Столбец для выбора возраста собеседника -->
             <div class="column">
-                <p>Возраст собеседника:</p>
+                <p>Выберите диапазон возраста собеседника:</p>
                 <div class="age-range-buttons">
                     <button class="partner-age-btn" data-range="18-25">18–25 лет</button>
                     <button class="partner-age-btn" data-range="26-35">26–35 лет</button>
@@ -62,17 +61,20 @@
         </div>
 
         <!-- Состояние поиска -->
-        <div class="search-status" id="searchStatus">Готовы к общению</div>
+        <div class="search-status" id="searchStatus">
+            Готовы к общению
+            <div id="loadingIndicator" style="display: none;">⏳ Ищем собеседника...</div>
+        </div>
 
         <button id="startChat" disabled>Начать общение</button>
         <button id="endChat">Завершить общение</button>
+
+        <footer>© Анонимный голосовой чат</footer>
     </div>
 
-    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('https://onlinechat-d66c.onrender.com', {
-            transports: ['websocket']
-        });
+        const socket = io('https://onlinechat-d66c.onrender.com');
 
         let peerConnection;
         const configuration = {
@@ -81,6 +83,11 @@
                 },
                 {
                     urls: 'stun:stun.services.mozilla.com'
+                },
+                {
+                    urls: 'turn:numb.viagenie.ca',
+                    username: 'ваш-email@example.com', // Замените на ваш логин
+                    credential: 'ваш-пароль' // Замените на ваш пароль
                 }
             ]
         };
@@ -198,27 +205,20 @@
             const [minUserAge, maxUserAge] = selectedUserAgeRange.split('-').map(Number);
             const [minPartnerAge, maxPartnerAge] = selectedPartnerAgeRange.split('-').map(Number);
 
-            socket.emit('joinQueue', {
-                age: Math.floor((minUserAge + maxUserAge) / 2),
-                minAge: minPartnerAge,
-                maxAge: maxPartnerAge,
-                userGender,
-                partnerGender
-            });
-
-            document.getElementById('startChat').style.display = 'none';
-            document.getElementById('endChat').style.display = 'block';
-            document.getElementById('searchStatus').textContent = 'Ищем собеседника...';
+            startSearch();
 
             try {
                 peerConnection = new RTCPeerConnection(configuration);
 
                 peerConnection.onicecandidate = event => {
                     if (event.candidate) {
+                        console.log('ICE candidate:', event.candidate);
                         socket.emit('signal', {
                             candidate: event.candidate,
                             peerId: socket.id
                         });
+                    } else {
+                        console.log('No more ICE candidates');
                     }
                 };
 
@@ -229,40 +229,58 @@
                     document.body.appendChild(audio);
 
                     document.getElementById('searchStatus').textContent = 'Соединение установлено!';
+                    document.getElementById('loadingIndicator').style.display = 'none';
                 };
 
                 peerConnection.onconnectionstatechange = () => {
                     console.log('Connection state changed:', peerConnection.connectionState);
 
-                    if (peerConnection.connectionState === 'disconnected') {
-                        alert('Собеседник покинул чат.');
-                        document.getElementById('startChat').style.display = 'block';
-                        document.getElementById('endChat').style.display = 'none';
-                        document.getElementById('searchStatus').textContent = 'Готовы к общению';
-                        location.reload();
+                    switch (peerConnection.connectionState) {
+                        case 'connected':
+                            console.log('Соединение успешно установлено.');
+                            break;
+                        case 'disconnected':
+                        case 'failed':
+                            console.log('Соединение разорвано или произошла ошибка.');
+                            alert('Соединение разорвано. Попробуйте снова.');
+                            location.reload();
+                            break;
+                        case 'closed':
+                            console.log('Соединение закрыто.');
+                            break;
                     }
                 };
-
-                // Таймаут для поиска собеседника
-                const searchTimeout = setTimeout(() => {
-                    if (document.getElementById('searchStatus').textContent === 'Ищем собеседника...') {
-                        alert('Собеседник не найден. Попробуйте позже.');
-                        document.getElementById('startChat').style.display = 'block';
-                        document.getElementById('endChat').style.display = 'none';
-                        document.getElementById('searchStatus').textContent = 'Готовы к общению';
-                        socket.disconnect();
-                    }
-                }, 30000); // 30 секунд
-
-                // Очистка таймаута, если собеседник найден
-                socket.on('connectToPeer', () => {
-                    clearTimeout(searchTimeout);
-                });
             } catch (error) {
                 console.error('Error initializing WebRTC:', error);
                 alert('Ошибка при установке соединения. Попробуйте позже.');
             }
         };
+
+        function startSearch() {
+            const [minUserAge, maxUserAge] = selectedUserAgeRange.split('-').map(Number);
+            const [minPartnerAge, maxPartnerAge] = selectedPartnerAgeRange.split('-').map(Number);
+
+            socket.emit('joinQueue', {
+                age: Math.floor((minUserAge + maxUserAge) / 2),
+                minAge: minPartnerAge,
+                maxAge: maxPartnerAge,
+                userGender,
+                partnerGender
+            });
+
+            document.getElementById('loadingIndicator').style.display = 'inline';
+
+            const searchTimeout = setTimeout(() => {
+                if (document.getElementById('searchStatus').textContent === 'Готовы к общению') {
+                    alert('Собеседник не найден. Повторная попытка...');
+                    startSearch(); // Повторный поиск
+                }
+            }, 30000); // 30 секунд
+
+            socket.on('connectToPeer', () => {
+                clearTimeout(searchTimeout);
+            });
+        }
 
         document.getElementById('endChat').onclick = () => {
             socket.disconnect();
