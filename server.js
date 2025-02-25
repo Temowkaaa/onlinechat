@@ -1,18 +1,19 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const {
-    v4: uuidv4
-} = require('uuid');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: ['https://onlinechat-1.onrender.com', 'http://localhost:3000'], // Разрешенные домены
+        origin: 'https://onlinechat-1.onrender.com', // Например, https://onlinechat-1.onrender.com
         methods: ['GET', 'POST']
     }
 });
+
+// Обслуживание статических файлов Socket.IO
+app.use('/socket.io', express.static(path.join(__dirname, 'node_modules/socket.io/client-dist')));
 
 let users = [];
 let onlineCount = 0;
